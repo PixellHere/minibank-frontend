@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { register } from '../api/auth';
 
 export default function Register({ onSwitchToLogin }) {
     const [firstName, setFirstName] = useState('');
@@ -14,6 +15,7 @@ export default function Register({ onSwitchToLogin }) {
 
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Dynamiczne sprawdzanie haseł (tylko jeśli użytkownik zaczął wpisywać drugie hasło)
     const isConfirming = confirmPassword.length > 0;
@@ -28,28 +30,14 @@ export default function Register({ onSwitchToLogin }) {
             return;
         }
 
+        setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:8080/api/clients', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    firstName,
-                    lastName,
-                    transferTag,
-                    phoneNumber
-                })
-            });
-
-            if (response.ok) {
-                setSuccess(true);
-            } else {
-                setError('Błąd rejestracji. Taki email lub tag może już istnieć.');
-            }
+            await register({ email, password, firstName, lastName, transferTag, phoneNumber });
+            setSuccess(true);
         } catch (err) {
-            console.error(err);
-            setError('Błąd połączenia z serwerem.');
+            setError(err.message || 'Błąd połączenia z serwerem.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -142,6 +130,7 @@ export default function Register({ onSwitchToLogin }) {
                                         <button
                                             onClick={() => setShowPassword(!showPassword)}
                                             className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors" type="button"
+                                            aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
                                         >
                                             <span className="material-symbols-outlined text-xl">{showPassword ? "visibility_off" : "visibility"}</span>
                                         </button>
@@ -159,6 +148,7 @@ export default function Register({ onSwitchToLogin }) {
                                         <button
                                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                             className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors" type="button"
+                                            aria-label={showConfirmPassword ? "Ukryj hasło" : "Pokaż hasło"}
                                         >
                                             <span className="material-symbols-outlined text-xl">{showConfirmPassword ? "visibility_off" : "visibility"}</span>
                                         </button>
@@ -177,11 +167,11 @@ export default function Register({ onSwitchToLogin }) {
                                 {/* ZMIANA: Przycisk jest lekko "wyblakły", jeśli hasła się nie zgadzają */}
                                 <button
                                     type="submit"
-                                    disabled={isConfirming && !passwordsMatch}
-                                    className={`w-full h-14 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full shadow-xl shadow-primary/20 transition-all duration-200 mt-4 flex items-center justify-center gap-2 ${isConfirming && !passwordsMatch ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}`}
+                                    disabled={(isConfirming && !passwordsMatch) || isLoading}
+                                    className={`w-full h-14 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full shadow-xl shadow-primary/20 transition-all duration-200 mt-4 flex items-center justify-center gap-2 ${(isConfirming && !passwordsMatch) || isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}`}
                                 >
-                                    Create Account
-                                    <span className="material-symbols-outlined text-lg">person_add</span>
+                                    {isLoading ? "Tworzenie konta..." : "Create Account"}
+                                    {!isLoading && <span className="material-symbols-outlined text-lg">person_add</span>}
                                 </button>
                             </form>
                         )}

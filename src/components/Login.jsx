@@ -1,32 +1,26 @@
 import { useState } from 'react';
+import { login } from '../api/auth';
 
 export default function Login({ onLoginSuccess, onSwitchToRegister }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+        setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:8080/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('jwt_token', data.token);
-                onLoginSuccess(); // Informujemy App.jsx, że się udało!
-            } else {
-                setError('Nieprawidłowy email lub hasło.');
-            }
+            const data = await login(email, password);
+            localStorage.setItem('jwt_token', data.token);
+            onLoginSuccess(); // Informujemy App.jsx, że się udało!
         } catch (err) {
-            console.error("Szczegóły błędu sieci:", err);
-            setError('Błąd połączenia z serwerem.');
+            setError(err.message || 'Błąd połączenia z serwerem.');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -57,7 +51,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
                                     <input
                                         className="w-full h-14 px-6 bg-surface-container-low border-none rounded-2xl text-on-surface font-medium placeholder:text-outline/50 focus:ring-2 focus:ring-primary/10 focus:bg-surface-container-lowest transition-all duration-300"
                                         placeholder="name@example.com"
-                                        type="text"
+                                        type="email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                     />
@@ -80,6 +74,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
                                         onClick={() => setShowPassword(!showPassword)}
                                         className="absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
                                         type="button"
+                                        aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
                                     >
                                         <span className="material-symbols-outlined text-xl">
                                             {showPassword ? "visibility_off" : "visibility"}
@@ -91,9 +86,13 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
                             {/* Wyświetlanie błędu nad przyciskiem */}
                             {error && <p className="text-red-500 text-sm font-bold text-center mt-2">{error}</p>}
 
-                            <button type="submit" className="w-full h-14 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all duration-200 mt-4 flex items-center justify-center gap-2">
-                                Log In
-                                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full h-14 bg-gradient-to-br from-primary to-primary-container text-white font-bold rounded-full shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all duration-200 mt-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            >
+                                {isLoading ? "Logowanie..." : "Log In"}
+                                {!isLoading && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
                             </button>
                         </form>
                     </div>
@@ -122,7 +121,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister }) {
                     <a className="text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors" href="#">Privacy</a>
                     <a className="text-xs font-medium text-on-surface-variant hover:text-on-surface transition-colors" href="#">Security</a>
                 </div>
-                <p className="text-xs font-medium text-on-surface-variant opacity-50">© 2024 Vault Digital Atelier.</p>
+                <p className="text-xs font-medium text-on-surface-variant opacity-50">© {new Date().getFullYear()} Vault Digital Atelier.</p>
             </footer>
         </div>
     );
